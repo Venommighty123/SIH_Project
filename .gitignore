@@ -1,0 +1,27 @@
+# Python virtual environment
+venv/
+ENV/
+env/
+.venv/
+SIH_venv/
+
+# Environment variables
+.env
+*.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# VSCode / PyCharm settings
+.vscode/
+.idea/
