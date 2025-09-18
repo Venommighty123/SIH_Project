@@ -4,11 +4,10 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_community.document_loaders import CSVLoader
 from pydantic import BaseModel, Field
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 import pandas as pd
 import numpy as np
-import random
 import os
 
 load_dotenv()
@@ -28,13 +27,16 @@ model = ChatGoogleGenerativeAI(
 )
 
 class suggestion(BaseModel):
-    fact_1: str = Field(default = None, description = "Fact 1 based upon the prompt"),
-    fact_2: str = Field(default = None, description = "Fact 2 based upon the prompt"),
-    fact_3: str = Field(default = None, description = "Fact 3 based upon the prompt"),
+    crop: str = Field(default = None, description = "Crop to be grown in the field")
+    fact_1: str = Field(default = None, description = "Suggestion 1 based upon the prompt")
+    fact_2: str = Field(default = None, description = "Suggestion 2 based upon the prompt")
+    fact_3: str = Field(default = None, description = "Suggestion 3 based upon the prompt")
+    fact_4: str = Field(default = None, description = "Suggestion 4 based upon the prompt")
+    fact_5: str = Field(default = None, description = "Suggestion 5 based upon the prompt")
 
-structured_model = model.with_structured_output(suggestion)
+parser = PydanticOutputParser(pydantic_object = suggestion)
 
-loader = CSVLoader(r"testing.py")
+loader = CSVLoader(r"testing.csv", content_columns=["Nitrogen","Phosphorus","Potassium","Calcium","Magnesium","Sulfur","Iron","Manganese","Zinc","Copper","Boron","Molybdenum","Chlorine","Nickel","Silicon"])
 testing = loader.load()
 state = pd.read_csv(r"testing.csv").loc[0, "State"]
 
@@ -52,12 +54,6 @@ try:
     )
     
     vector_store_3 = FAISS.load_local(
-        r"SIH_Vector_DB\FAISS_3_Pest_Weed_db", 
-        embedding_model, 
-        allow_dangerous_deserialization=True
-    )
-    
-    vector_store_4 = FAISS.load_local(
         r"SIH_Vector_DB\FAISS_4_Crop_Nutrients_db", 
         embedding_model, 
         allow_dangerous_deserialization=True
@@ -88,20 +84,34 @@ for i in crop_data:
     for j in range(len(l)):
         if l[j] == "Crops:":
             for k in range(j+1, len(l)):
-                crops.append(l[k])
+                if l[k] in crops:
+                    continue
+                else:
+                    crops.append(l[k])
             break
 
-crops = random.sample(crops, k = 3)
+retriever_3 = vector_store_3.as_retriever(
+    search_type = "mmr",
+    search_kwargs = {"k" : 5, "lambda_mult" : 0.8})
 
-final_crops = ""
+results = retriever_3.invoke(testing[0].page_content)
 
-for i in crops:
-    final_crops += i + " "
+crop_nutrients = ""
+for i in results:
+    crop_nutrients += i.page_content
 
-print(final_crops)
+prompt = PromptTemplate(
+    template = """You are a professional agricultural farmer, and you provided with a string of nutrients and their quantity present in the soil. You are also provided with a context window of how much nutrients are required by each crop given in context. Your task is to first decide the crop which will provide more yield and cash,give 5 suggestions upon what can be done in order to make the land more fertile for that particular crop.
+    The suggestions should contain names of chemical fertilizers, manure, irrigation etc. or other methods to match the nutrients with the ideal requirement. You are not required to provide details from the two strings back to the farmer, and each suggestion should not be more than 3 lines. Note that nutrients like [Nitrogen,Phosphorus,Potassium,Calcium,Magnesium,Sulfur] are in kg/tonne and the rest are in g/tonne.
+    String 1 (Data of the Current Field) : {string_1}
+    String 2 (Ideal Requirement per crop) : {string_2}
+    {format_instruction}""",
+    input_variables = ["string_1", "string_2"],
+    partial_variables = {"format_instruction": parser.get_format_instructions()}
+)
 
-retriever_3 = vector_store_4.as_retriever(search_kwargs = {"k" : 3})
+chain = prompt | model | parser
 
-result = retriever_3.invoke(final_crops)
+result = chain.invoke({"string_1" : testing[0].page_content, "string_2" : crop_nutrients})
 
 print(result)

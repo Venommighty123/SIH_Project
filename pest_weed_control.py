@@ -35,44 +35,35 @@ class suggestion(BaseModel):
 
 parser = PydanticOutputParser(pydantic_object = suggestion)
 
-loader = CSVLoader(
-    r"testing_2.csv",
-    content_columns=["Crops","Nitrogen","Phosphorus","Potassium","Calcium","Magnesium","Sulfur","Iron","Manganese","Zinc","Copper","Boron","Molybdenum","Chlorine","Nickel","Silicon"])
-
-testing_2 = loader.load()
+state = pd.read_csv(r"testing.csv").loc[0, "State"]
 
 try:
     vector_store_1 = FAISS.load_local(
-        r"SIH_Vector_DB\FAISS_4_Crop_Nutrients_db", 
+        r"SIH_Vector_DB\FAISS_3_Pest_Weed_db", 
         embedding_model, 
         allow_dangerous_deserialization=True
     )
     
-    print("Vector Store loaded successfully!")
+    print("All vector stores loaded successfully!")
     
 except Exception as e:
     print(f"Error loading vector stores: {e}")
 
 retriever_1 = vector_store_1.as_retriever(search_kwargs = {"k" : 1})
 
-user_data = testing_2[0].page_content
-
-result = retriever_1.invoke(user_data)
-
-ideal_data = result[0].page_content
+pest_data = retriever_1.invoke(state)[0].page_content
 
 prompt = PromptTemplate(
-    template = """You are an agricultural expert. You are provided with two strings: The first one contains the information about the soil field of the farmer, and the second string is the true information required to grow the particular crop.
-    Your task is to give 5 suggestions the farmer should use in order to make his field better for the particular crop, based upon the two strings. The suggestions should contain names of chemical fertilizers, manure, irrigation etc. or other methods to match the nutrients with the ideal scenario. You are not required to provide details from the two strings back to the farmer, and each suggestion should not be more than 3 lines. Note that nutrients like [Nitrogen,Phosphorus,Potassium,Calcium,Magnesium,Sulfur] are in kg/tonne and the rest are in g/tonne.
-    String 1 :- {string_1}
-    String 2 :- {string_2}
+    template = """You are a professional agricultural farmer, and you provided with a string of pests and weeds that were found in your fields. Your task is to find ways to eleminate these weeds and pests from you farms before they destroy the hard-earned yield. You are required to provide 5 suggestions based upon the details given upon how you will remove these pests and weeds from your farms. The suggestions should include names of the chemical or natural pasicides, insecticides etc. and other methods required to remove those unwanted things.
+    You are not required to provide details from the string back to the farmer, and each suggestion should not be more than 3 lines. Keep in mind not to suggest too expensive needs that even the farmer fails to buy it.
+    Data of the Pests and Weeds along with your location : {string}
     {format_instruction}""",
-    input_variables=["string_1", "string_2"],
-    partial_variables={"format_instruction": parser.get_format_instructions()}
+    input_variables = ["string"],
+    partial_variables = {"format_instruction": parser.get_format_instructions()}
 )
 
 chain = prompt | model | parser
 
-final_result = chain.invoke({"string_1" : user_data, "string_2" : ideal_data})
+result = chain.invoke({"string" : pest_data})
 
-print(final_result)
+print(result)
