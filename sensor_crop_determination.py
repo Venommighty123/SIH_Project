@@ -36,7 +36,7 @@ class suggestion(BaseModel):
 
 parser = PydanticOutputParser(pydantic_object = suggestion)
 
-loader = CSVLoader(r"testing.csv", content_columns=["Nitrogen","Phosphorus","Potassium","Calcium","Magnesium","Sulfur","Iron","Manganese","Zinc","Copper","Boron","Molybdenum","Chlorine","Nickel","Silicon"])
+loader = CSVLoader(r"testing.csv", content_columns=["State","Nitrogen","Phosphorus","Potassium","Ph","Temperature","Salinity","Humidity"])
 testing = loader.load()
 state = pd.read_csv(r"testing.csv").loc[0, "State"]
 
@@ -90,19 +90,18 @@ for i in crop_data:
                     crops.append(l[k])
             break
 
-retriever_3 = vector_store_3.as_retriever(
-    search_type = "mmr",
-    search_kwargs = {"k" : 5, "lambda_mult" : 0.8})
+retriever_3 = vector_store_3.as_retriever(search_kwargs = {"k" : 5})
 
 results = retriever_3.invoke(testing[0].page_content)
 
 crop_nutrients = ""
 for i in results:
     crop_nutrients += i.page_content
+print(crop_nutrients)
 
 prompt = PromptTemplate(
-    template = """You are a professional agricultural farmer, and you provided with a string of nutrients and their quantity present in the soil. You are also provided with a context window of how much nutrients are required by each crop given in context. Your task is to first decide the crop which will provide more yield and cash,give 5 suggestions upon what can be done in order to make the land more fertile for that particular crop.
-    The suggestions should contain names of chemical fertilizers, manure, irrigation etc. or other methods to match the nutrients with the ideal requirement. You are not required to provide details from the two strings back to the farmer, and each suggestion should not be more than 3 lines. Note that nutrients like [Nitrogen,Phosphorus,Potassium,Calcium,Magnesium,Sulfur] are in kg/tonne and the rest are in g/tonne.
+    template = """You are a professional agricultural farmer, and you provided with a string of requirements present in the field. You are also provided with a context window of how much of each requirement is required by each crop below. Your task is to first decide the crop which will provide can grow on current conditions, give 5 suggestions upon what can be done in order to make the land more fertile for that particular crop, so that current conditions meet the ideal requirements.
+    The suggestions should contain names of chemical fertilizers, manure, irrigation etc. or other methods to match the current condition with the ideal requirement. You are not required to provide details from the two strings back to the farmer, and each suggestion should not be more than 3 lines. Note that nutrients like Nitrogen, Phosphorus, Potassium are in kg/hectare, Temperature in Degrees Celsius, Salinity in dS/m, and Humidity in Percentages.
     String 1 (Data of the Current Field) : {string_1}
     String 2 (Ideal Requirement per crop) : {string_2}
     {format_instruction}""",

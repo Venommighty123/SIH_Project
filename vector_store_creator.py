@@ -25,7 +25,7 @@ crop_soil = loader_2.load()
 loader_3 = CSVLoader(r"Crop Files\State_Pest_Weed.csv")
 pest_weed = loader_3.load()
 
-loader_4 = CSVLoader(r"Crop Files\New_Crop_Nutrients.csv")
+loader_4 = CSVLoader(r"Crop Files\New_Crop_Nutrients.csv", content_columns=["Crop","Nitrogen","Phosphorus","Potassium","Ph","Temperature","Salinity","Humidity"])
 crop_nutrients = loader_4.load()
 
 os.makedirs(r"SIH_Vector_DB\FAISS_1_State_Soil_db", exist_ok=True)

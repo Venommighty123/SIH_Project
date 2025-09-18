@@ -35,9 +35,7 @@ class suggestion(BaseModel):
 
 parser = PydanticOutputParser(pydantic_object = suggestion)
 
-loader = CSVLoader(
-    r"testing_2.csv",
-    content_columns=["Crops","Nitrogen","Phosphorus","Potassium","Calcium","Magnesium","Sulfur","Iron","Manganese","Zinc","Copper","Boron","Molybdenum","Chlorine","Nickel","Silicon"])
+loader = CSVLoader(r"testing_2.csv", content_columns=["Crop","State","Nitrogen","Phosphorus","Potassium","Ph","Temperature","Salinity","Humidity"])
 
 testing_2 = loader.load()
 
@@ -63,7 +61,7 @@ ideal_data = result[0].page_content
 
 prompt = PromptTemplate(
     template = """You are an agricultural expert. You are provided with two strings: The first one contains the information about the soil field of the farmer, and the second string is the true information required to grow the particular crop.
-    Your task is to give 5 suggestions the farmer should use in order to make his field better for the particular crop, based upon the two strings. The suggestions should contain names of chemical fertilizers, manure, irrigation etc. or other methods to match the nutrients with the ideal scenario. You are not required to provide details from the two strings back to the farmer, and each suggestion should not be more than 3 lines. Note that nutrients like [Nitrogen,Phosphorus,Potassium,Calcium,Magnesium,Sulfur] are in kg/tonne and the rest are in g/tonne.
+    Your task is to give 5 suggestions the farmer should use in order to make his field better for the particular crop, based upon the two strings. The suggestions should contain names of chemical fertilizers, manure, irrigation, etc. or other methods to match the given requirements with the ideal requirements. You are not required to provide details from the two strings back to the farmer, and each suggestion should not be more than 3 lines. Note that nutrients like Nitrogen, Phosphorus, Potassium are in kg/hectare, Temperature in Degrees Celsius, Salinity in dS/m, and Humidity in Percentages.
     String 1 :- {string_1}
     String 2 :- {string_2}
     {format_instruction}""",
